@@ -7,13 +7,15 @@ This version has **no JSON or inline input parsing**.
 """
 from __future__ import annotations
 
+M = 1e5  # Big-M value for Big-M method (not used here)
 # ====== EDIT YOUR DATA HERE ======
-SUPPLY = [75, 125, 100]
-DEMAND = [80, 60, 70, 85]
+SUPPLY = [25, 35, 30, 10]
+DEMAND = [10, 15, 25, 20]
 COST = [
-    [464, 513, 654, 867],
-    [352, 416, 690, 791],
-    [995, 682, 388, 685]
+    [1.08, 1.095, 1.110, 1.125],
+    [M, 1.11, 1.125, 1.14],
+    [M, M, 1.1, 1.115],
+    [M, M, M, 1.13],
 ]
 #
 # COST = [[-p for p in row] for row in COST]
