@@ -8,11 +8,12 @@ This version has **no JSON or inline input parsing**.
 from __future__ import annotations
 
 # ====== EDIT YOUR DATA HERE ======
-SUPPLY = [400, 500]
-DEMAND = [300, 200, 400]
+SUPPLY = [75, 125, 100]
+DEMAND = [80, 60, 70, 85]
 COST = [
-    [600,800,700],
-    [400,900,600],
+    [464, 513, 654, 867],
+    [352, 416, 690, 791],
+    [995, 682, 388, 685]
 ]
 #
 # COST = [[-p for p in row] for row in COST]
