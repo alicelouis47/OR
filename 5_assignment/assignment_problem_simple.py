@@ -285,6 +285,17 @@ def solve(M: List[List[float]], mode: str, verbose: bool):
         print(f"Total COST = {real_total_cost:.3f}")
 
 def main():
+    # ======== DATA BLOCK (EDIT HERE) ========
+    MODE = "min"   # "min" = minimize COST, "max" = maximize PROFIT
+
+    M = 1e4
+    # If MODE="min": MATRIX = costs. If MODE="max": MATRIX = profits.
+    MATRIX = [
+        [8, 6, 3, 7],
+        [5, M, 8, 4],
+        [6, 3, 9, 6],
+        [0, 0, 0, 0],
+    ]
     parser = argparse.ArgumentParser(description="Assignment Problem via Hungarian Algorithm (Simple)")
     parser.add_argument("--mode", choices=["min","max"], help="override MODE in file")
     parser.add_argument("--quiet", action="store_true", help="suppress step-by-step details")

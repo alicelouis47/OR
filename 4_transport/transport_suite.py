@@ -7,17 +7,7 @@ This version has **no JSON or inline input parsing**.
 """
 from __future__ import annotations
 
-M = 1e5  # Big-M value for Big-M method (not used here)
-# ====== EDIT YOUR DATA HERE ======
-SUPPLY = [25, 35, 30, 10]
-DEMAND = [10, 15, 25, 20]
-COST = [
-    [1.08, 1.095, 1.110, 1.125],
-    [M, 1.11, 1.125, 1.14],
-    [M, M, 1.1, 1.115],
-    [M, M, M, 1.13],
-]
-#
+
 # COST = [[-p for p in row] for row in COST]
 
 # =================================
@@ -206,6 +196,56 @@ def vogel_approximation(supply: List[float], demand: List[float], cost: List[Lis
         if abs(demand[j]) < TOL: active_cols.discard(j)
     return plan, cost, added
 
+# add this function to your script
+
+def russel_approximation(supply: List[float], demand: List[float], cost: List[List[float]], verbose=True):
+    """Russel's Approximation Method (RAM)"""
+    supply, demand, cost, added = balance_transport(supply, demand, cost)
+    m, n = len(supply), len(demand)
+    plan = [[0.0 for _ in range(n)] for _ in range(m)]
+
+    if verbose:
+        print("=== Russel's Approximation Method (RAM) ===")
+        print("Balanced problem:")
+        print(f"  supply = {supply}")
+        print(f"  demand = {demand}")
+        print(f"  added = {added}\n")
+
+    step = 0
+    while sum(supply) > TOL and sum(demand) > TOL:
+        step += 1
+        
+        # Calculate u_i and v_j
+        u = [max([cost[i][j] for j in range(n) if plan[i][j] == 0 and demand[j] > TOL] or [0.0]) for i in range(m)]
+        v = [max([cost[i][j] for i in range(m) if plan[i][j] == 0 and supply[i] > TOL] or [0.0]) for j in range(n)]
+
+        # Find the cell with the most negative opportunity cost
+        best = None
+        for i in range(m):
+            if supply[i] <= TOL: continue
+            for j in range(n):
+                if demand[j] <= TOL: continue
+                
+                # Check if cell is unallocated and has not been "used"
+                if plan[i][j] == 0.0 and supply[i] > TOL and demand[j] > TOL:
+                    opportunity_cost = cost[i][j] - u[i] - v[j]
+                    if best is None or opportunity_cost < best[0]:
+                        best = (opportunity_cost, i, j)
+        
+        if best is None: break
+        
+        o_cost, i, j = best
+        alloc = min(supply[i], demand[j])
+        plan[i][j] += alloc
+        supply[i] -= alloc; demand[j] -= alloc
+
+        if verbose:
+            print(f"Step {step}: most negative opportunity cost={o_cost:.4f} at cell ({i},{j})")
+            print(f"  Allocate {alloc:.4f} units.")
+            print(f"  Remaining: supply[{i}]={supply[i]:.4f}, demand[{j}]={demand[j]:.4f}\n")
+            
+    return plan, cost, added
+
 # -------------------- Stepping-Stone improvement --------------------
 def positives_as_basics(plan):
     basics = set()
@@ -340,6 +380,7 @@ def stepping_stone(plan, cost, verbose=True):
     return plan
 
 # -------------------- Orchestrator --------------------
+# update this function in your script
 def solve_transport(supply, demand, cost, method: str, do_optimal: bool, quiet: bool):
     method = method.lower()
     verbose = not quiet
@@ -349,8 +390,10 @@ def solve_transport(supply, demand, cost, method: str, do_optimal: bool, quiet: 
         plan, cost_mat, added = least_cost_method(supply[:], demand[:], cost, verbose=verbose)
     elif method == 'vam':
         plan, cost_mat, added = vogel_approximation(supply[:], demand[:], cost, verbose=verbose)
+    elif method == 'ram': # Add this new elif block
+        plan, cost_mat, added = russel_approximation(supply[:], demand[:], cost, verbose=verbose)
     else:
-        raise ValueError("method must be one of: nwc, lcm, vam")
+        raise ValueError("method must be one of: nwc, lcm, vam, ram")
 
     # Show initial plan & cost
     print("\n=== Data ===")
@@ -370,10 +413,20 @@ def solve_transport(supply, demand, cost, method: str, do_optimal: bool, quiet: 
     print_transport_table(improved, cost_mat, title="Optimal Plan (qty@unit_cost)")
     print(f"\nTotal transportation cost = {total_cost(improved, cost_mat):.4f}")
 
-# -------------------- CLI --------------------
+# update the CLI parser in the main function
 def main():
+    M = 1e5  # Big-M value for Big-M method (not used here)
+    # ====== EDIT YOUR DATA HERE ======
+    SUPPLY = [5, 2, 3]
+    DEMAND = [3, 3, 2, 2]
+    COST = [
+        [3, 7, 6, 4],
+        [2, 4, 3, 2],
+        [4, 3, 8, 5]
+]
+#
     parser = argparse.ArgumentParser(description="Transport Suite: NWC / LCM / VAM (+ optional Stepping-Stone)")
-    parser.add_argument("--method", type=str, default="vam", choices=["nwc", "lcm", "vam"], help="Initial method")
+    parser.add_argument("--method", type=str, default="vam", choices=["nwc", "lcm", "vam", "ram"], help="Initial method") # add 'ram'
     parser.add_argument("--optimal", action="store_true", help="Run Stepping-Stone after the initial method")
     parser.add_argument("--quiet", action="store_true", help="Less verbose output")
     args = parser.parse_args()
