@@ -8,7 +8,7 @@ This version has **no JSON or inline input parsing**.
 from __future__ import annotations
 
 
-# COST = [[-p for p in row] for row in COST]
+
 
 # =================================
 
@@ -16,6 +16,15 @@ from typing import List, Tuple, Dict, Set
 import argparse, math, collections
 
 TOL = 1e-12
+import pandas as pd
+
+def print_table(cost, alloc, step):
+    df_cost = pd.DataFrame(cost)
+    df_alloc = pd.DataFrame(alloc).fillna(0).astype(int)
+    df = df_cost.astype(str) + " (" + df_alloc.astype(str) + ")"
+    print(f"\n=== Step {step}: Allocation Update ===")
+    print(df.to_string(index=False, header=False))
+
 
 # -------------------- Utilities --------------------
 def balance_transport(supply: List[float], demand: List[float], cost: List[List[float]]):
@@ -69,6 +78,7 @@ def northwest_corner(supply: List[float], demand: List[float], cost: List[List[f
         print(f"  supply = {supply}")
         print(f"  demand = {demand}")
         print(f"  added = {added}\n")
+
     i = j = 0
     step = 0
     while i < m and j < n:
@@ -78,7 +88,8 @@ def northwest_corner(supply: List[float], demand: List[float], cost: List[List[f
         supply[i] -= alloc; demand[j] -= alloc
         if verbose:
             print(f"Step {step}: allocate {alloc:.4f} at cell ({i},{j})  cost={cost[i][j]:.4f}")
-            print(f"  Remaining: supply[{i}]={supply[i]:.4f}, demand[{j}]={demand[j]:.4f}")
+            print_transport_table(plan, cost, title=f"Table after Step {step}")
+            print(f"  Remaining: supply[{i}]={supply[i]:.4f}, demand[{j}]={demand[j]:.4f}\n")
         if abs(supply[i]) < TOL and abs(demand[j]) < TOL:
             if verbose: print("  Both exhausted -> move diagonal (degenerate).")
             i += 1; j += 1
@@ -90,6 +101,7 @@ def northwest_corner(supply: List[float], demand: List[float], cost: List[List[f
             j += 1
         if verbose: print()
     return plan, cost, added
+
 
 def least_cost_method(supply: List[float], demand: List[float], cost: List[List[float]], verbose=True):
     supply, demand, cost, added = balance_transport(supply, demand, cost)
@@ -119,7 +131,8 @@ def least_cost_method(supply: List[float], demand: List[float], cost: List[List[
         if verbose:
             print(f"Step {step}: choose cheapest cell ({i},{j}) with cost={cmin:.4f}")
             print(f"  Allocate {alloc:.4f}")
-            print(f"  Remaining: supply[{i}]={supply[i]:.4f}, demand[{j}]={demand[j]:.4f}")
+            print_transport_table(plan, cost, title=f"Table after Step {step}")
+            print(f"  Remaining: supply[{i}]={supply[i]:.4f}, demand[{j}]={demand[j]:.4f}\n")
         if abs(supply[i]) < TOL:
             active_rows.discard(i); 
             if verbose: print(f"  Row exhausted -> remove row {i}")
@@ -128,6 +141,7 @@ def least_cost_method(supply: List[float], demand: List[float], cost: List[List[
             if verbose: print(f"  Column exhausted -> remove column {j}")
         if verbose: print()
     return plan, cost, added
+
 
 def _two_smallest(values: List[float]) -> Tuple[float, float]:
     inf = float("inf"); a, b = inf, inf
@@ -168,8 +182,8 @@ def vogel_approximation(supply: List[float], demand: List[float], cost: List[Lis
                 m1,m2,p = rpen[i]; m2s = "∞" if m2 == float('inf') else f"{m2:.4f}"
                 print(f"  row[{i}] -> min1={m1:.4f}, min2={m2s}, penalty={p:.4f}")
             print()
-        # choose by max penalty; tie-break by smaller cheapest cell then prefer rows
-        best = None  # (penalty, -cheapest, is_row, -idx)
+        # choose
+        best = None  
         chosen_type, chosen_idx = None, None
         for i in active_rows:
             m1,m2,p = rpen[i]; score = (p, -m1, 1, -i)
@@ -191,10 +205,12 @@ def vogel_approximation(supply: List[float], demand: List[float], cost: List[Lis
         if verbose:
             print(f"  Chosen: {chosen_type}[{chosen_idx}] with max penalty {best[0]:.4f}")
             print(f"  Allocate {alloc:.4f} units to cell ({i},{j}) with cost {cost[i][j]:.4f}")
+            print_transport_table(plan, cost, title=f"Table after Step {step}")
             print(f"  Remaining supply[{i}]={supply[i]:.4f}, demand[{j}]={demand[j]:.4f}\n")
         if abs(supply[i]) < TOL: active_rows.discard(i)
         if abs(demand[j]) < TOL: active_cols.discard(j)
     return plan, cost, added
+
 
 # add this function to your script
 
@@ -214,37 +230,31 @@ def russel_approximation(supply: List[float], demand: List[float], cost: List[Li
     step = 0
     while sum(supply) > TOL and sum(demand) > TOL:
         step += 1
-        
         # Calculate u_i and v_j
         u = [max([cost[i][j] for j in range(n) if plan[i][j] == 0 and demand[j] > TOL] or [0.0]) for i in range(m)]
         v = [max([cost[i][j] for i in range(m) if plan[i][j] == 0 and supply[i] > TOL] or [0.0]) for j in range(n)]
-
         # Find the cell with the most negative opportunity cost
         best = None
         for i in range(m):
             if supply[i] <= TOL: continue
             for j in range(n):
                 if demand[j] <= TOL: continue
-                
-                # Check if cell is unallocated and has not been "used"
-                if plan[i][j] == 0.0 and supply[i] > TOL and demand[j] > TOL:
+                if plan[i][j] == 0.0:
                     opportunity_cost = cost[i][j] - u[i] - v[j]
                     if best is None or opportunity_cost < best[0]:
                         best = (opportunity_cost, i, j)
-        
         if best is None: break
-        
         o_cost, i, j = best
         alloc = min(supply[i], demand[j])
         plan[i][j] += alloc
         supply[i] -= alloc; demand[j] -= alloc
-
         if verbose:
             print(f"Step {step}: most negative opportunity cost={o_cost:.4f} at cell ({i},{j})")
             print(f"  Allocate {alloc:.4f} units.")
+            print_transport_table(plan, cost, title=f"Table after Step {step}")
             print(f"  Remaining: supply[{i}]={supply[i]:.4f}, demand[{j}]={demand[j]:.4f}\n")
-            
     return plan, cost, added
+
 
 # -------------------- Stepping-Stone improvement --------------------
 def positives_as_basics(plan):
@@ -417,13 +427,14 @@ def solve_transport(supply, demand, cost, method: str, do_optimal: bool, quiet: 
 def main():
     M = 1e5  # Big-M value for Big-M method (not used here)
     # ====== EDIT YOUR DATA HERE ======
-    SUPPLY = [5, 2, 3]
-    DEMAND = [3, 3, 2, 2]
+    SUPPLY = [4, 6, 6]
+    DEMAND = [4, 4, 2, 5, 5]
     COST = [
-        [3, 7, 6, 4],
-        [2, 4, 3, 2],
-        [4, 3, 8, 5]
+        [2, 4, 6, 5, 7],
+        [7, 6, 3, M, 4],
+        [8, 7, 5, 2, 5]
 ]
+    # COST = [[-p for p in row] for row in COST]
 #
     parser = argparse.ArgumentParser(description="Transport Suite: NWC / LCM / VAM (+ optional Stepping-Stone)")
     parser.add_argument("--method", type=str, default="vam", choices=["nwc", "lcm", "vam", "ram"], help="Initial method") # add 'ram'
