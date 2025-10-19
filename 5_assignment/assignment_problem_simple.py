@@ -6,7 +6,7 @@ Pure-Python, step-by-step. **No FORBIDDEN / BIG_M logic.**
 How to use
 ----------
 1) Edit the DATA BLOCK below (MODE, MATRIX).
-2) Run:  python assignment_problem_simple.py
+2) Run:  python assignment.py
    (Optional) Flags:
       --mode min|max   # override MODE in file
       --quiet          # suppress step-by-step (final result only)
@@ -21,18 +21,7 @@ from __future__ import annotations
 from typing import List, Tuple
 import argparse
 
-# ======== DATA BLOCK (EDIT HERE) ========
-MODE = "min"   # "min" = minimize COST, "max" = maximize PROFIT
 
-M = 1e9
-# If MODE="min": MATRIX = costs. If MODE="max": MATRIX = profits.
-MATRIX = [
-    [820, 810, 840, 960],
-    [820, 810, 840, 960],
-    [800, 870, M, 920],
-    [800, 870, M, 920],
-    [740, 900, 810, 840],
-]
 # =======================================
 
 TOL = 1e-12
@@ -86,20 +75,22 @@ def hungarian(cost: List[List[float]], verbose=True) -> Tuple[List[int], float]:
         print_mat("Initial cost matrix:", a)
 
     # Step 1: Row reduction
+    rmins = [min(a[i]) for i in range(n)]
     for i in range(n):
-        rmin = min(a[i])
         for j in range(n):
-            a[i][j] -= rmin
+            a[i][j] -= rmins[i]
     if verbose:
         print_mat("After row reduction:", a)
+        print("Row mins subtracted:", [f"{v:.3f}" for v in rmins], "\n")
 
     # Step 2: Column reduction
+    cmins = [min(a[i][j] for i in range(n)) for j in range(n)]
     for j in range(n):
-        cmin = min(a[i][j] for i in range(n))
         for i in range(n):
-            a[i][j] -= cmin
+            a[i][j] -= cmins[j]
     if verbose:
         print_mat("After column reduction:", a)
+        print("Column mins subtracted:", [f"{v:.3f}" for v in cmins], "\n")
 
     # Masks: 1=star, 2=prime
     mask = [[0]*n for _ in range(n)]
@@ -271,39 +262,52 @@ def solve(M: List[List[float]], mode: str, verbose: bool):
 
     # Interpret result
     print("\n=== RESULT ===")
-    human_map = [(i+1, j+1) if j is not None else (i+1, None) for i, j in mapping]
-    print("Assignments (row -> col) [1-based, None=dummy]:", human_map)
+    for i, j in mapping:
+        if j is not None:
+            print(f"  Person {i+1} → Job {j+1}  (Cost = {M[i][j]})")
+        else:
+            print(f"  Person {i+1} → None (dummy)")
 
     if mode == "max":
-        # Recompute profit directly from original MATRIX (profits)
-        profit = 0.0
-        for i, j in mapping:
-            if j is not None:
-                profit += M[i][j]
+        profit = sum(M[i][j] for i,j in mapping if j is not None)
         print(f"Total PROFIT = {profit:.3f}")
     else:
-        print(f"Total COST = {real_total_cost:.3f}")
+        cost = sum(M[i][j] for i,j in mapping if j is not None)
+        print(f"Total COST = {cost:.3f}")
 
 def main():
-    # ======== DATA BLOCK (EDIT HERE) ========
-    MODE = "min"   # "min" = minimize COST, "max" = maximize PROFIT
-
-    M = 1e4
-    # If MODE="min": MATRIX = costs. If MODE="max": MATRIX = profits.
-    MATRIX = [
-        [8, 6, 3, 7],
-        [5, M, 8, 4],
-        [6, 3, 9, 6],
-        [0, 0, 0, 0],
-    ]
     parser = argparse.ArgumentParser(description="Assignment Problem via Hungarian Algorithm (Simple)")
     parser.add_argument("--mode", choices=["min","max"], help="override MODE in file")
     parser.add_argument("--quiet", action="store_true", help="suppress step-by-step details")
     args = parser.parse_args()
+    # ======== DATA BLOCK (EDIT HERE) ========
+    MODE = "min"   # "min" = minimize COST, "max" = maximize PROFIT
+    M =1e4
+    # If MODE="min": MATRIX = costs. If MODE="max": MATRIX = profits.
+    '''
+    ข้อ 5
+    MATRIX = [
+        [75, 40, 50, M, 55],
+        [70, 55, 60, 45, 60],
+        [80, 50, 65, 40, 60],
+        [70, M, 60, 50, 55],
+        [75, 50, 55, 50, 65]
+    ]
+    '''
+
+    MATRIX = [
+        [75, 40, 50, M, 55],
+        [70, 55, 60, 45, 60],
+        [80, 50, 65, 40, 60],
+        [70, M, 60, 50, 55],
+        [75, 50, 55, 50, 65]
+    ]
 
     mode = args.mode if args.mode else MODE
     verbose = not args.quiet
     solve(MATRIX, mode=mode, verbose=verbose)
 
+#python 5_assignment/assignment_problem_simple.py --mode max --quiet
+#python 5_assignment/assignment_problem_simple.py --mode min    
 if __name__ == "__main__":
     main()

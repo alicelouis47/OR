@@ -1,0 +1,1 @@
+python 4_transport/transport_suite.py --method vam --optimal

@@ -444,5 +444,10 @@ def main():
 
     solve_transport(SUPPLY, DEMAND, COST, method=args.method, do_optimal=args.optimal, quiet=args.quiet)
 
+#python 4_transport/transport_suite.py --method vam --optimal
+#python 4_transport/transport_suite.py --method ram --optimal
+#python 4_transport/transport_suite.py --method lcm --optimal
+#python 4_transport/transport_suite.py --method nwc --optimal
+
 if __name__ == "__main__":
     main()

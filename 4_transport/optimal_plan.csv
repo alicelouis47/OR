@@ -1,0 +1,6 @@
+,Dest1,Dest2,Dest3,Dest4,Dest5,Dest6,RowSum,Supply
+Demand,1,1,1,1,1,2,,
+Src1,1@8,1@4,,,1@9,,3,3
+Src2,,,,,,2@0,2,2
+Src3,,,1@5,1@6,,,2,2
+ColSum,1,1,1,1,1,2,,
